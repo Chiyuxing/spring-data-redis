@@ -27,10 +27,11 @@ import org.springframework.util.Assert;
 /**
  * Immutable {@link RedisCacheConfiguration} helps customizing {@link RedisCache} behaviour such as caching
  * {@literal null} values, cache key prefixes and binary serialization. <br />
- * Start with {@link RedisCacheConfiguration#defaultCacheConfig()} and customize {@link RedisCache} behaviour from
- * there on.
+ * Start with {@link RedisCacheConfiguration#defaultCacheConfig()} and customize {@link RedisCache} behaviour from there
+ * on.
  *
  * @author Christoph Strobl
+ * @author Mark Paluch
  * @since 2.0
  */
 public class RedisCacheConfiguration {
@@ -41,8 +42,9 @@ public class RedisCacheConfiguration {
 	private final boolean usePrefix;
 
 	private final SerializationPair<String> keySerializationPair;
-	private final SerializationPair<?> valueSerializationPair;
+	private final SerializationPair<Object> valueSerializationPair;
 
+	@SuppressWarnings("unchecked")
 	private RedisCacheConfiguration(Duration ttl, Boolean cacheNullValues, Boolean usePrefix, String keyPrefix,
 			SerializationPair<String> keySerializationPair, SerializationPair<?> valueSerializationPair) {
 
@@ -51,7 +53,7 @@ public class RedisCacheConfiguration {
 		this.usePrefix = usePrefix;
 		this.keyPrefix = keyPrefix;
 		this.keySerializationPair = keySerializationPair;
-		this.valueSerializationPair = valueSerializationPair;
+		this.valueSerializationPair = (SerializationPair<Object>) valueSerializationPair;
 	}
 
 	/**
@@ -70,7 +72,7 @@ public class RedisCacheConfiguration {
 	 * <dt>value serializer</dt>
 	 * <dd>JdkSerializationRedisSerializer.class</dd>
 	 * </dl>
-	 * 
+	 *
 	 * @return new {@link RedisCacheConfiguration}.
 	 */
 	public static RedisCacheConfiguration defaultCacheConfig() {
@@ -81,14 +83,14 @@ public class RedisCacheConfiguration {
 	}
 
 	/**
-	 * Set the ttl to apply for cache entries. Use {@link Duration#ZERO} to have an eternal cache.
+	 * Set the ttl to apply for cache entries. Use {@link Duration#ZERO} to declare an eternal cache.
 	 *
 	 * @param ttl must not be {@literal null}.
 	 * @return new {@link RedisCacheConfiguration}.
 	 */
 	public RedisCacheConfiguration entryTtl(Duration ttl) {
 
-		Assert.notNull(ttl, "Ttl must not be null!");
+		Assert.notNull(ttl, "TTL duration must not be null!");
 
 		return new RedisCacheConfiguration(ttl, cacheNullValues, usePrefix, keyPrefix, keySerializationPair,
 				valueSerializationPair);
@@ -193,7 +195,7 @@ public class RedisCacheConfiguration {
 	/**
 	 * @return never {@literal null}.
 	 */
-	public SerializationPair getValueSerializationPair() {
+	public SerializationPair<Object> getValueSerializationPair() {
 		return valueSerializationPair;
 	}
 
@@ -201,7 +203,7 @@ public class RedisCacheConfiguration {
 	 * @return The expiration time (ttl) for cache entries. Never {@literal null}.
 	 */
 	public Duration getTtl() {
-		return ttl != null ? ttl : Duration.ZERO;
+		return ttl;
 	}
 
 }

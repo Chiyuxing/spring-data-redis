@@ -41,7 +41,6 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
 import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Tests for {@link RedisCache} with {@link DefaultRedisCacheWriter} using different {@link RedisSerializer} and
@@ -59,8 +58,7 @@ public class RedisCacheTests {
 	Person sample = new Person("calmity", new Date());
 	byte[] binarySample;
 
-	NullValue nullValue = NullValue.class.cast(ReflectionTestUtils.getField(NullValue.class, "INSTANCE"));
-	byte[] binaryNullValue = new JdkSerializationRedisSerializer().serialize(nullValue);
+	byte[] binaryNullValue = new JdkSerializationRedisSerializer().serialize(NullValue.INSTANCE);
 
 	RedisConnectionFactory connectionFactory;
 	RedisSerializer serializer;
