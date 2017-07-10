@@ -25,7 +25,6 @@ import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.format.support.DefaultFormattingConversionService;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -46,7 +45,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
 	/**
 	 * Create new {@link RedisCache}.
-	 * 
+	 *
 	 * @param name must not be {@literal null}.
 	 * @param cacheWriter must not be {@literal null}.
 	 * @param cacheConfig must not be {@literal null}.
@@ -164,8 +163,8 @@ public class RedisCache extends AbstractValueAdaptingCache {
 	 * @param value can be {@literal null}.
 	 * @return preprocessed value. Can be {@literal null}.
 	 */
-	@Nullable
-	protected Object preProcessCacheValue(@Nullable Object value) {
+
+	protected Object preProcessCacheValue(Object value) {
 
 		if (value != null) {
 			return value;
@@ -186,7 +185,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 
 	/**
 	 * Serialize the value to cache.
-	 * 
+	 *
 	 * @param value must not be {@literal null}.
 	 * @return never {@literal null}.
 	 */
@@ -205,7 +204,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 	 * @param value must not be {@literal null}.
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
+
 	protected Object deserializeCacheValue(byte[] value) {
 
 		if (isAllowNullValues() && ObjectUtils.nullSafeEquals(value, BINARY_NULL_VALUE)) {

@@ -17,8 +17,6 @@ package org.springframework.data.redis.cache;
 
 import java.time.Duration;
 
-import org.springframework.lang.Nullable;
-
 /**
  * {@link RedisCacheWriter} provides low level access to redis commands ({@code SET, SETNX, GET, EXPIRE,...} used for
  * caching. <br />
@@ -38,7 +36,7 @@ public interface RedisCacheWriter {
 	 * @param value The value stored for the key. Must not be {@literal null}.
 	 * @param ttl Optional expiration time. Can be {@literal null}.
 	 */
-	void put(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+	void put(String name, byte[] key, byte[] value, Duration ttl);
 
 	/**
 	 * Get the binary value representation from Redis stored for the given key.
@@ -47,20 +45,20 @@ public interface RedisCacheWriter {
 	 * @param key must not be {@literal null}.
 	 * @return {@literal null} if key does not exist.
 	 */
-	@Nullable
+
 	byte[] get(String name, byte[] key);
 
 	/**
 	 * Write the given value to Redis if the key does not already exist.
-	 * 
+	 *
 	 * @param name The cache name must not be {@literal null}.
 	 * @param key The key for the cache entry. Must not be {@literal null}.
 	 * @param value The value stored for the key. Must not be {@literal null}.
 	 * @param ttl Optional expiration time. Can be {@literal null}.
 	 * @return {@literal null} if the value has been written, the value stored for the key if it already exists.
 	 */
-	@Nullable
-	byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+
+	byte[] putIfAbsent(String name, byte[] key, byte[] value, Duration ttl);
 
 	/**
 	 * Remove the given key from Redis.
