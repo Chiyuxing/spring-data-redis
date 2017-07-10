@@ -15,19 +15,20 @@
  */
 package org.springframework.data.redis.cache;
 
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
 import org.springframework.cache.support.SimpleValueWrapper;
-import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.util.ByteUtils;
-import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * {@link org.springframework.cache.Cache} implementation using for Redis as underlying store.
@@ -47,7 +48,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 	private final String name;
 	private final RedisCacheWriter cacheWriter;
 	private final RedisCacheConfiguration cacheConfig;
-	private final ConfigurableConversionService conversionService = new DefaultFormattingConversionService();
+	private final ConversionService conversionService;
 
 	/**
 	 * Create new {@link RedisCache}.
@@ -67,8 +68,7 @@ public class RedisCache extends AbstractValueAdaptingCache {
 		this.name = name;
 		this.cacheWriter = cacheWriter;
 		this.cacheConfig = cacheConfig;
-
-		conversionService.addConverter(String.class, byte[].class, source -> source.getBytes(StandardCharsets.UTF_8));
+		this.conversionService = cacheConfig.getConversionService();
 	}
 
 	/*
@@ -259,12 +259,37 @@ public class RedisCache extends AbstractValueAdaptingCache {
 	 */
 	protected String createCacheKey(Object key) {
 
-		String convertedKey = conversionService.convert(key, String.class);
+		String convertedKey = convertKey(key);
+
 		if (!cacheConfig.usePrefix()) {
 			return convertedKey;
 		}
 
 		return prefixCacheKey(convertedKey);
+	}
+
+	/**
+	 * Convert {@code key} to a {@link String} representation used for cache key creation.
+	 *
+	 * @param key will never be {@literal null}.
+	 * @return never {@literal null}.
+	 * @throws IllegalStateException if {@code key} cannot be converted to {@link String}.
+	 */
+	protected String convertKey(Object key) {
+
+		TypeDescriptor source = TypeDescriptor.forObject(key);
+		if (conversionService.canConvert(source, TypeDescriptor.valueOf(String.class))) {
+			return conversionService.convert(key, String.class);
+		}
+
+		Method toString = ReflectionUtils.findMethod(key.getClass(), "toString");
+
+		if (toString != null && !Object.class.equals(toString.getDeclaringClass())) {
+			return key.toString();
+		}
+
+		throw new IllegalStateException(
+				"Cannot convert " + source + " to String. Register a Converter or override toString().");
 	}
 
 	private byte[] createAndConvertCacheKey(Object key) {

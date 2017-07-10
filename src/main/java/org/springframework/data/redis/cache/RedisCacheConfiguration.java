@@ -15,13 +15,18 @@
  */
 package org.springframework.data.redis.cache;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 
 import org.springframework.cache.Cache;
+import org.springframework.cache.interceptor.SimpleKey;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.format.support.DefaultFormattingConversionService;
 import org.springframework.util.Assert;
 
 /**
@@ -44,9 +49,12 @@ public class RedisCacheConfiguration {
 	private final SerializationPair<String> keySerializationPair;
 	private final SerializationPair<Object> valueSerializationPair;
 
+	private final ConversionService conversionService;
+
 	@SuppressWarnings("unchecked")
 	private RedisCacheConfiguration(Duration ttl, Boolean cacheNullValues, Boolean usePrefix, String keyPrefix,
-			SerializationPair<String> keySerializationPair, SerializationPair<?> valueSerializationPair) {
+			SerializationPair<String> keySerializationPair, SerializationPair<?> valueSerializationPair,
+			ConversionService conversionService) {
 
 		this.ttl = ttl;
 		this.cacheNullValues = cacheNullValues;
@@ -54,6 +62,7 @@ public class RedisCacheConfiguration {
 		this.keyPrefix = keyPrefix;
 		this.keySerializationPair = keySerializationPair;
 		this.valueSerializationPair = (SerializationPair<Object>) valueSerializationPair;
+		this.conversionService = conversionService;
 	}
 
 	/**
@@ -71,15 +80,22 @@ public class RedisCacheConfiguration {
 	 * <dd>StringRedisSerializer.class</dd>
 	 * <dt>value serializer</dt>
 	 * <dd>JdkSerializationRedisSerializer.class</dd>
+	 * <dt>conversion service</dt>
+	 * <dd>{@link DefaultFormattingConversionService} with {@link #registerDefaultConverters(ConverterRegistry) default}
+	 * cache key converters</dd>
 	 * </dl>
 	 *
 	 * @return new {@link RedisCacheConfiguration}.
 	 */
 	public static RedisCacheConfiguration defaultCacheConfig() {
 
+		DefaultFormattingConversionService conversionService = new DefaultFormattingConversionService();
+
+		registerDefaultConverters(conversionService);
+
 		return new RedisCacheConfiguration(Duration.ZERO, true, true, null,
 				SerializationPair.fromSerializer(new StringRedisSerializer()),
-				SerializationPair.fromSerializer(new JdkSerializationRedisSerializer()));
+				SerializationPair.fromSerializer(new JdkSerializationRedisSerializer()), conversionService);
 	}
 
 	/**
@@ -93,7 +109,7 @@ public class RedisCacheConfiguration {
 		Assert.notNull(ttl, "TTL duration must not be null!");
 
 		return new RedisCacheConfiguration(ttl, cacheNullValues, usePrefix, keyPrefix, keySerializationPair,
-				valueSerializationPair);
+				valueSerializationPair, conversionService);
 	}
 
 	/**
@@ -106,8 +122,8 @@ public class RedisCacheConfiguration {
 
 		Assert.notNull(prefix, "Prefix must not be null!");
 
-		return new RedisCacheConfiguration(ttl, cacheNullValues, true, prefix, keySerializationPair,
-				valueSerializationPair);
+		return new RedisCacheConfiguration(ttl, cacheNullValues, true, prefix, keySerializationPair, valueSerializationPair,
+				conversionService);
 	}
 
 	/**
@@ -119,7 +135,8 @@ public class RedisCacheConfiguration {
 	 * @return new {@link RedisCacheConfiguration}.
 	 */
 	public RedisCacheConfiguration disableCachingNullValues() {
-		return new RedisCacheConfiguration(ttl, false, usePrefix, keyPrefix, keySerializationPair, valueSerializationPair);
+		return new RedisCacheConfiguration(ttl, false, usePrefix, keyPrefix, keySerializationPair, valueSerializationPair,
+				conversionService);
 	}
 
 	/**
@@ -132,7 +149,21 @@ public class RedisCacheConfiguration {
 	public RedisCacheConfiguration disableKeyPrefix() {
 
 		return new RedisCacheConfiguration(ttl, cacheNullValues, false, keyPrefix, keySerializationPair,
-				valueSerializationPair);
+				valueSerializationPair, conversionService);
+	}
+
+	/**
+	 * Define the {@link ConversionService} used for cache key to {@link String} conversion.
+	 *
+	 * @param conversionService must not be {@literal null}.
+	 * @return new {@link RedisCacheConfiguration}.
+	 */
+	public RedisCacheConfiguration withConversionService(ConversionService conversionService) {
+
+		Assert.notNull(conversionService, "ConversionService must not be null!");
+
+		return new RedisCacheConfiguration(ttl, cacheNullValues, usePrefix, keyPrefix, keySerializationPair,
+				valueSerializationPair, conversionService);
 	}
 
 	/**
@@ -146,7 +177,7 @@ public class RedisCacheConfiguration {
 		Assert.notNull(keySerializationPair, "KeySerializationPair must not be null!");
 
 		return new RedisCacheConfiguration(ttl, cacheNullValues, usePrefix, keyPrefix, keySerializationPair,
-				valueSerializationPair);
+				valueSerializationPair, conversionService);
 	}
 
 	/**
@@ -160,7 +191,7 @@ public class RedisCacheConfiguration {
 		Assert.notNull(valueSerializationPair, "ValueSerializationPair must not be null!");
 
 		return new RedisCacheConfiguration(ttl, cacheNullValues, usePrefix, keyPrefix, keySerializationPair,
-				valueSerializationPair);
+				valueSerializationPair, conversionService);
 	}
 
 	/**
@@ -206,4 +237,26 @@ public class RedisCacheConfiguration {
 		return ttl;
 	}
 
+	/**
+	 * @return The {@link ConversionService} used for cache key to {@link String} conversion. Never {@literal null}.
+	 */
+	public ConversionService getConversionService() {
+		return conversionService;
+	}
+
+	/**
+	 * Registers default cache key converters. The following converters get registered:
+	 * <ul>
+	 * <li>{@link String} to {@link byte byte[]} using UTF-8 encoding.</li>
+	 * <li>{@link SimpleKey} to {@link String}</li>
+	 *
+	 * @param registry must not be {@literal null}.
+	 */
+	public static void registerDefaultConverters(ConverterRegistry registry) {
+
+		Assert.notNull(registry, "ConverterRegistry must not be null!");
+
+		registry.addConverter(String.class, byte[].class, source -> source.getBytes(StandardCharsets.UTF_8));
+		registry.addConverter(SimpleKey.class, String.class, SimpleKey::toString);
+	}
 }
